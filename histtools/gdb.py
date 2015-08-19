@@ -57,7 +57,8 @@ def generate_domains(gdb, domain_dict, xlsx):
 
 def create_history_gdb(location, domains):
     #xlsx that contains all required domains
-    xlsx = "../templates/HistoryDomainsGA.xlsx"
+    xlsx = os.path.join(os.path.dirname(__file__), 
+                        "../templates/HistoryDomainsGA.xlsx")
     gdbname = "HistorySurvey.gdb"
     if arcpy.Exists(os.path.join(location, gdbname)):
         arcpy.Delete_management(os.path.join(location, gdbname))

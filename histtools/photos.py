@@ -29,7 +29,7 @@ import docx
 
 #Define spatial reference for resource table
 #WGS_1984 UTM 16 WKID
-spatref = SpatialReference(32716)
+#spatref = SpatialReference(32716)
 #WGS_1984 UTM 17 WKID
 #spatref = SpatialReference(32617)
 
@@ -120,12 +120,13 @@ def getdomaindescription(gdb, subtype, codedvalue):
 def create_resource_table(gdb, fc, photo_folder, spatref, sql=None):
     #Define table template
     thumbpath = os.path.join(photo_folder, "thumbnails")
-    document = docx.Document("../templates/template.docx")
+    document = docx.Document(os.path.join(os.path.dirname(__file__), 
+                                          "../templates/template.docx"))
     infc = os.path.join(gdb, fc)
-    with da.SearchCursor(infc, ["ResourceID", "Notes", "Eligibility", 
-                             "SHAPE@X", "SHAPE@Y", "GlobalID", "StrucType", 
-                             "BldType", "StyleType", "PropName", 
-                             "Address"], sql, spatref) as cursor:
+    flds = ["ResourceID", "PropName", "Address", 
+            "SHAPE@X", "SHAPE@Y",  "StrucType", "BldType", 
+            "StyleType", "Eligibility", "ConstYr", "Notes", "GlobalID"]
+    with da.SearchCursor(infc, flds, sql, spatref) as cursor:
         tbl = document.add_table(rows=1, cols=9)
         hdr_cells  = tbl.rows[0].cells
         hdr_cells[1].text = "Resource ID"
@@ -137,45 +138,60 @@ def create_resource_table(gdb, fc, photo_folder, spatref, sql=None):
         hdr_cells[7].text = "NRHP Evaluation"
         hdr_cells[8].text = "Notes"
         for row in sorted(cursor):
+            resid = "{}".format(row[flds.index("ResourceID")])
+            resname = "{}".format(row[flds.index("PropName")])
+            address = "{}".format(row[flds.index("Address")])
+            easting = row[flds.index("SHAPE@X")]
+            northing = row[flds.index("SHAPE@Y")]
+            structure = row[flds.index("StrucType")]
+            bldg = row[flds.index("BldType")]
+            stylerow = row[flds.index("StyleType")]
+            nrhp = "{}".format(row[flds.index("Eligibility")])
+            constyr = "{}".format(row[flds.index("ConstYr")])
+            notes = "{}".format(row[flds.index("Notes")])
+            glblid = "{}".format(row[flds.index("GlobalID")])
             #add feature count logic
             row_cells = tbl.add_row().cells
-            row_cells[1].text = "{}".format(row[0])
+            row_cells[1].text = "{}".format(resid)
             #temp picture holder
             paragraph = row_cells[0].paragraphs[0]
             run = paragraph.add_run()
             counterbool = True
             piccounter = 0
-            pic = os.path.join(thumbpath, row[5] + ".jpg")
-    #        smallpic = Image.open(pic).thumbnail((300,200))
-    #        smallpic.save(pic, "JPEG")        
+            pic = os.path.join(thumbpath, "{}.jpg".format(glblid))
             if os.path.exists(pic):
                 hgt = 1400000
                 run.add_picture(pic, width = hgt * 1.5, height = hgt)
                 while counterbool == True:
-                    pic = os.path.join(thumbpath, row[5] + str(piccounter) + ".jpg")
+                    pic = os.path.join(thumbpath, 
+                                       "{}{}.jpg".format(glblid, piccounter))
                     if os.path.exists(pic):
                         hgt = 1400000
-                        run.add_picture(pic, width = hgt * 1.5, height = hgt)
+                        wdth = hgt * 1.5
+                        run.add_picture(pic, width=wdth, height=hgt)
                         piccounter += 1
                     else:
                         counterbool = False
             else:
                 pass
             try:
-    	        bldgsub = subtypes.get(row[6])
-    	        bldgstyle = getdomaindescription(gdb, subtypes.get(row[6]), row[7])
-    	        styletype = style.get(row[8])
-    	        elig = eligdict.get(row[2])
-    	        row_cells[2].text = str(row[9])
-    	        row_cells[3].text = '{}'.format(row[10])
-    	        row_cells[4].text = str(int(row[3]))
-    	        row_cells[5].text = str(int(row[4]))
-    	        row_cells[6].text = ", ".join((bldgsub,bldgstyle,styletype))
-    	        row_cells[7].text = elig
-    	        row_cells[8].text = '{}'.format(row[1])
+                bldgsub = subtypes.get(structure)
+                bldgstyle = getdomaindescription(gdb, subtypes.get(structure), bldg)
+                styletype = style.get(stylerow)
+                eligibility = eligdict.get(nrhp)
+                row_cells[2].text = resname
+                row_cells[3].text = address
+                row_cells[4].text = "{}".format(int(easting))
+                row_cells[5].text = "{}".format(int(northing))
+                row_cells[6].text = ", ".join((bldgsub, bldgstyle, styletype))
+                row_cells[7].text = eligibility
+                if not constyr == "None":
+                    row_cells[8].text = "; ".join((constyr, '{}'.format(notes)))
+                else:
+                    row_cells[8].text = "{}".format(notes)
             except ValueError as e:
-    	        print e.message
-        document.save(os.path.join(photo_folder,"tblReport.docx"))
+                print e.message
+            document.save(os.path.join(photo_folder,"tblReport.docx"))
         return document
 
 def create_list_from_table_report(doc):
@@ -187,7 +203,13 @@ def create_list_from_table_report(doc):
         for cell in row.cells:
             _toadd.append(cell.text)
         dblist.append(_toadd)
-    return dblist    
+    return dblist
+
+def spatial_join(geom, feat, fld):
+    """
+    On the fly spatial join for a given coordinate pair
+    """    
+    pass
 
 if __name__ == "__main__":
     pass
