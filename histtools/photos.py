@@ -15,69 +15,8 @@ from PIL import Image
 import os
 import docx
 
-#Define Geodatabase with attachments
-#gdb = "filegdb"
-#Define where to save the attachments
-#photows = "photo_location"
-#if not os.path.exists(photows):
-#    os.mkdir(photows)
-#Name of feature class with attachments
-#fcname = "HistoricStructures"
-#fc = os.path.join(gdb, fcname)
-#Specify sql for table report
-#sql = "Eligibility = 'E'"
+from shared import subtypes, eligdict, styledict
 
-#Define spatial reference for resource table
-#WGS_1984 UTM 16 WKID
-#spatref = SpatialReference(32716)
-#WGS_1984 UTM 17 WKID
-#spatref = SpatialReference(32617)
-
-subtypes = {
-0: "Barn", 
-1: "Cemetery",
-2: "Church",
-3: "Commercial",
-4: "Gas Station",
-5: "House",
-6: "Other",
-7: "Outbuilding",
-8: "School",
-}
-
-eligdict = {
-"E": "Eligible",
-"NE": "Not Eligible",
-"L": "Listed",
-"PE": "Recommended Eligible",
-"U":"Unknown"
-}
-
-style = {
-'COL' : 'Colonial Revival',
-'CRF' : 'Craftsman',
-'ECR' : 'Early Classical Revival',
-'EVR' : 'English Vernacular Revival',
-'FE' : 'Federal',
-'FR' : 'Federal Revival',
-'FV' : 'Folk Victorian',
-'FVR' : 'French Vernacular Revival',
-'GE' : 'Georgian',
-'GOV' : 'Gothic Revival',
-'GRV' : 'Greek Revival',
-'HVE' : 'High Victorian Eclectic',
-'INT' : 'International ',
-'IRR' : 'Italian Renaissance Revival',
-'ITA' : 'Italianate',
-'MR' : 'Mediterranean Revival',
-'NR' : 'Neoclassical Revival',
-'NS' : 'No Style',
-'PR' : 'Prairie',
-'QA' : 'Queen Anne',
-'SE' : 'Second Empire',
-'SCR' : 'Spanish Colonial Revival',
-'ST' : 'Stick'
-}
 
 def extract_photos_from_gdb(gdb, out_folder, fcname):
     fldBLOB = 'DATA'  
@@ -93,8 +32,7 @@ def extract_photos_from_gdb(gdb, out_folder, fcname):
           GlobID = row[2]
           # save to disk
           uniquename = arcpy.CreateUniqueName(GlobID + ".jpg", out_folder)
-          open(uniquename,'wb').write(binaryRep.tobytes())
-    
+          open(uniquename,'wb').write(binaryRep.tobytes())    
     #Convert all pictures to thumbnails
     os.chdir(out_folder)
     for photo in os.listdir(out_folder):
@@ -183,10 +121,10 @@ def create_resource_table(gdb, fc, photo_folder, spatref, idxfeat=None, sql=None
             try:
                 bldgsub = subtypes.get(structure)
                 bldgstyle = getdomaindescription(gdb, subtypes.get(structure), bldg)
-                styletype = style.get(stylerow)
+                styletype = styledict.get(stylerow)
                 eligibility = eligdict.get(nrhp)                   
                 row_cells[2].text = resname
-                cntys = r"U:\Shared\GIS\GDOT_Datasets.gdb\COUNTY"
+                cntys = r"C:\GIS\GDOT_Datasets.gdb\COUNTY"
                 county = spatial_join(cntys, (easting, northing), 
                                       "NAME", spatref)
                 if not county == None:
@@ -203,7 +141,7 @@ def create_resource_table(gdb, fc, photo_folder, spatref, idxfeat=None, sql=None
                     row_cells[8].text = "{}".format(notes)
             except ValueError as e:
                 print e.message
-            document.save(os.path.join(photo_folder,"!tblReport.docx"))
+        document.save(os.path.join(photo_folder, "!tblReport.docx"))
         return document
 
 def create_list_from_table_report(doc):
@@ -236,15 +174,11 @@ def spatial_join(idxfeat, pnt_tup, idxfld, spatref):
         with arcpy.da.SearchCursor(idxfeat, flds, "", spatref) as rows:
             for row in rows:
                 if row[1].contains(pntgeom):
-                    return row[0]    
+                    return row[0]
+
+def main():
+    pass
 
 if __name__ == "__main__":
-    gdb = r"C:\Users\bbatt\Documents\!TPK_STaging\Consolidation\Dev\HistorySurvey_Production.gdb"
-    fc = "HistoricStructures"
-    photo_folder = r"C:\Users\bbatt\Documents\!TPK_STaging\Consolidation\Dev\PTest"
-    spatref = arcpy.SpatialReference(26916)    
-    idxfeat = ""
-    sql = """ EPProject = 'GAP1507' """
-#    extract_photos_from_gdb(gdb, photo_folder, fc)
-    create_resource_table(gdb, fc, photo_folder, spatref, idxfeat, sql)
+    pass
     
