@@ -185,8 +185,14 @@ def create_resource_table(gdb, fc, photo_folder, spatref, idxfeat=None, sql=None
                 bldgstyle = getdomaindescription(gdb, subtypes.get(structure), bldg)
                 styletype = style.get(stylerow)
                 eligibility = eligdict.get(nrhp)                   
-                row_cells[2].text = "{}".format(resname)
-                row_cells[3].text = address
+                row_cells[2].text = resname
+                cntys = r"U:\Shared\GIS\GDOT_Datasets.gdb\COUNTY"
+                county = spatial_join(cntys, (easting, northing), 
+                                      "NAME", spatref)
+                if not county == None:
+                    row_cells[3].text = "{} ({})".format(address, county)
+                else:
+                    row_cells[3].text = address
                 row_cells[4].text = "{}".format(int(easting))
                 row_cells[5].text = "{}".format(int(northing))
                 row_cells[6].text = ", ".join((bldgsub, bldgstyle, styletype))
@@ -226,6 +232,7 @@ def spatial_join(idxfeat, pnt_tup, idxfld, spatref):
         pnt = arcpy.Point(pnt_tup[0], pnt_tup[1])    
         pntgeom = arcpy.PointGeometry(pnt, spatref)
         flds = [idxfld, 'SHAPE@']
+        #Spatial references should be the same
         with arcpy.da.SearchCursor(idxfeat, flds, "", spatref) as rows:
             for row in rows:
                 if row[1].contains(pntgeom):
