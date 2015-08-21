@@ -10,7 +10,7 @@ Suite of tools for working with environmental photos
 """
 
 
-from arcpy import da, SpatialReference, CreateUniqueName
+import arcpy
 from PIL import Image
 import os
 import docx
@@ -85,14 +85,14 @@ def extract_photos_from_gdb(gdb, out_folder, fcname):
     fldGlobID = 'REL_GLOBALID'    
     #Name of table with attachments
     tbl = os.path.join(gdb, "{}__ATTACH".format(fcname))
-    with da.SearchCursor(tbl, [fldBLOB, fldAttName, fldGlobID]) as cursor:
+    with arcpy.da.SearchCursor(tbl, [fldBLOB, fldAttName, fldGlobID]) as cursor:
     #iterate through table with attachments
     #Don't sort this cursor...weird things happen
        for row in cursor:
           binaryRep = row[0]
           GlobID = row[2]
           # save to disk
-          uniquename = CreateUniqueName(GlobID + ".jpg", out_folder)
+          uniquename = arcpy.CreateUniqueName(GlobID + ".jpg", out_folder)
           open(uniquename,'wb').write(binaryRep.tobytes())
     
     #Convert all pictures to thumbnails
@@ -110,14 +110,14 @@ def extract_photos_from_gdb(gdb, out_folder, fcname):
 
 def getdomaindescription(gdb, subtype, codedvalue):
     #In order to access domains, must make a local copy of database through ArcMap
-    dmns = da.ListDomains(gdb)
+    dmns = arcpy.da.ListDomains(gdb)
     for dmn in dmns:
         if dmn.name == subtype:
             vals = dmn.codedValues
             val = vals.get(codedvalue)
             return val
 
-def create_resource_table(gdb, fc, photo_folder, spatref, sql=None):
+def create_resource_table(gdb, fc, photo_folder, spatref, idxfeat=None, sql=None):
     #Define table template
     thumbpath = os.path.join(photo_folder, "thumbnails")
     document = docx.Document(os.path.join(os.path.dirname(__file__), 
@@ -126,7 +126,7 @@ def create_resource_table(gdb, fc, photo_folder, spatref, sql=None):
     flds = ["ResourceID", "PropName", "Address", 
             "SHAPE@X", "SHAPE@Y",  "StrucType", "BldType", 
             "StyleType", "Eligibility", "ConstYr", "Notes", "GlobalID"]
-    with da.SearchCursor(infc, flds, sql, spatref) as cursor:
+    with arcpy.da.SearchCursor(infc, flds, sql, spatref) as cursor:
         tbl = document.add_table(rows=1, cols=9)
         hdr_cells  = tbl.rows[0].cells
         hdr_cells[1].text = "Resource ID"
@@ -138,6 +138,7 @@ def create_resource_table(gdb, fc, photo_folder, spatref, sql=None):
         hdr_cells[7].text = "NRHP Evaluation"
         hdr_cells[8].text = "Notes"
         for row in sorted(cursor):
+            #Declare variables for readability
             resid = "{}".format(row[flds.index("ResourceID")])
             resname = "{}".format(row[flds.index("PropName")])
             address = "{}".format(row[flds.index("Address")])
@@ -152,7 +153,12 @@ def create_resource_table(gdb, fc, photo_folder, spatref, sql=None):
             glblid = "{}".format(row[flds.index("GlobalID")])
             #add feature count logic
             row_cells = tbl.add_row().cells
-            row_cells[1].text = "{}".format(resid)
+            spatjoin = spatial_join(idxfeat, (easting, northing), 
+                                    "PageName", spatref)
+            if not spatjoin == None:
+                row_cells[1].text = "{} / {}".format(resid, spatjoin)
+            else:
+                row_cells[1].text = "{}".format(resid)
             #temp picture holder
             paragraph = row_cells[0].paragraphs[0]
             run = paragraph.add_run()
@@ -178,8 +184,8 @@ def create_resource_table(gdb, fc, photo_folder, spatref, sql=None):
                 bldgsub = subtypes.get(structure)
                 bldgstyle = getdomaindescription(gdb, subtypes.get(structure), bldg)
                 styletype = style.get(stylerow)
-                eligibility = eligdict.get(nrhp)
-                row_cells[2].text = resname
+                eligibility = eligdict.get(nrhp)                   
+                row_cells[2].text = "{}".format(resname)
                 row_cells[3].text = address
                 row_cells[4].text = "{}".format(int(easting))
                 row_cells[5].text = "{}".format(int(northing))
@@ -191,7 +197,7 @@ def create_resource_table(gdb, fc, photo_folder, spatref, sql=None):
                     row_cells[8].text = "{}".format(notes)
             except ValueError as e:
                 print e.message
-            document.save(os.path.join(photo_folder,"tblReport.docx"))
+            document.save(os.path.join(photo_folder,"!tblReport.docx"))
         return document
 
 def create_list_from_table_report(doc):
@@ -205,11 +211,33 @@ def create_list_from_table_report(doc):
         dblist.append(_toadd)
     return dblist
 
-def spatial_join(geom, feat, fld):
+def spatial_join(idxfeat, pnt_tup, idxfld, spatref):
     """
     On the fly spatial join for a given coordinate pair
-    """    
-    pass
+    params:
+    pnt_tup - UTM coordinate pair
+    idxfeat - map index or other containing feature
+    fld - field to label table with
+    """
+    #Check for valid feature input
+    if not arcpy.Exists(idxfeat):
+        return None
+    else:
+        pnt = arcpy.Point(pnt_tup[0], pnt_tup[1])    
+        pntgeom = arcpy.PointGeometry(pnt, spatref)
+        flds = [idxfld, 'SHAPE@']
+        with arcpy.da.SearchCursor(idxfeat, flds, "", spatref) as rows:
+            for row in rows:
+                if row[1].contains(pntgeom):
+                    return row[0]    
 
 if __name__ == "__main__":
-    pass
+    gdb = r"C:\Users\bbatt\Documents\!TPK_STaging\Consolidation\Dev\HistorySurvey_Production.gdb"
+    fc = "HistoricStructures"
+    photo_folder = r"C:\Users\bbatt\Documents\!TPK_STaging\Consolidation\Dev\PTest"
+    spatref = arcpy.SpatialReference(26916)    
+    idxfeat = ""
+    sql = """ EPProject = 'GAP1507' """
+#    extract_photos_from_gdb(gdb, photo_folder, fc)
+    create_resource_table(gdb, fc, photo_folder, spatref, idxfeat, sql)
+    
