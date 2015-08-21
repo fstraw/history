@@ -14,21 +14,6 @@ import os
 import arcpy
 from operator import itemgetter
 
-domains = {
-"Barn": "Barn Types", 
-"Cemetery": "Cemetery Types", 
-"Church": "Church Types", 
-"Commercial": "Commercial Types", 
-"Gas Station": "Gas Station Types", 
-"House": "House Types", 
-"Styles": "General Styles", 
-"Other": "Other Features", 
-"Outbuilding": "Outbuilding Types", 
-"School": "School Types",
-"Eligibility": "Eligibility Assessment",
-"States": "Project States"
-}   
-
 subtypes = {
 "0": "Barn", 
 "1": "Cemetery",
@@ -55,9 +40,24 @@ def generate_domains(gdb, domain_dict, xlsx):
         except Exception, e:
             print e.message
 
-def create_history_gdb(location, domains):
+def create_history_gdb(location):
+    domains = {
+    "Barn": "Barn Types", 
+    "Cemetery": "Cemetery Types", 
+    "Church": "Church Types", 
+    "Commercial": "Commercial Types", 
+    "Gas Station": "Gas Station Types", 
+    "House": "House Types", 
+    "Styles": "General Styles", 
+    "Other": "Other Features", 
+    "Outbuilding": "Outbuilding Types", 
+    "School": "School Types",
+    "Eligibility": "Eligibility Assessment",
+    "States": "Project States"
+    }   
     #xlsx that contains all required domains
-    xlsx = "../templates/HistoryDomainsGA.xlsx"
+    xlsx = os.path.join(os.path.dirname(__file__), 
+                        "../templates/HistoryDomainsGA.xlsx")
     gdbname = "HistorySurvey.gdb"
     if arcpy.Exists(os.path.join(location, gdbname)):
         arcpy.Delete_management(os.path.join(location, gdbname))
@@ -74,7 +74,7 @@ def create_structures_fc(gdb):
     fc = "HistoricStructures"
     spatref = arcpy.SpatialReference("WGS 1984 Web Mercator (auxiliary sphere)")
     if arcpy.Exists(fc):
-        arcpy.Delete_management(fc)    
+        arcpy.Delete_management(os.path.join(gdb, fc))
     has_m = "DISABLED"
     has_z = "DISABLED"    
     # Execute CreateFeatureclass
@@ -128,7 +128,7 @@ def create_districts_fc(gdb):
     fc = "HistoricBoundary"
     spatref = arcpy.SpatialReference("WGS 1984 Web Mercator (auxiliary sphere)")
     if arcpy.Exists(fc):
-        arcpy.Delete_management(fc)    
+        arcpy.Delete_management(os.path.join(gdb, fc))
     has_m = "DISABLED"
     has_z = "DISABLED"    
     # Execute CreateFeatureclass
