@@ -6,6 +6,12 @@ History Photo Tools
 
 Suite of tools for working with environmental photos
 
+TODO:
+Clean up photo output procedure
+    - Thumbnail output is ugly
+    - File names are ugly
+    - Enable sql query
+Minimize function parameters
 
 @author: bbatt
 """
@@ -19,36 +25,39 @@ import docx
 from shared import subtypes, eligdict, styledict
 
 
-def extract_photos_from_gdb(gdb, out_folder, fcname):
+def extract_photos_from_fc(infc, out_folder):
+    if not os.path.exists(out_folder):
+        os.mkdir(out_folder)
     fldBLOB = 'DATA'  
     fldAttName = 'ATT_NAME'
-    fldGlobID = 'REL_GLOBALID'    
-    #Name of table with attachments
-    tbl = os.path.join(gdb, "{}__ATTACH".format(fcname))
-    with arcpy.da.SearchCursor(tbl, [fldBLOB, fldAttName, fldGlobID]) as cursor:
-    #iterate through table with attachments
-    #Don't sort this cursor...weird things happen
+    fldGlobID = 'REL_GLOBALID'
+    flds = [fldBLOB, fldAttName, fldGlobID]    
+    #Attachment table
+    tbl = os.path.join("{}__ATTACH".format(infc))
+    with arcpy.da.SearchCursor(tbl, flds) as cursor:
        for row in cursor:
           binaryRep = row[0]
           GlobID = row[2]
-          # save to disk
-          uniquename = arcpy.CreateUniqueName(GlobID + ".jpg", out_folder)
+          uniquename = arcpy.CreateUniqueName("{}.jpg".format(GlobID), 
+                                                  out_folder)
           open(uniquename,'wb').write(binaryRep.tobytes())    
-    #Convert all pictures to thumbnails
-    os.chdir(out_folder)
-    for photo in os.listdir(out_folder):
-        fullpath = os.path.abspath(photo)
-        fullpathdir = os.path.dirname(fullpath)
-        thumbpath = os.path.join(fullpathdir, "thumbnails")
-        if not os.path.exists(thumbpath):
-            os.makedirs(thumbpath)
-        if fullpath.endswith(".jpg"):
+          
+def create_thumbnails(photo_folder):    
+    os.chdir(photo_folder)
+    for photo in os.listdir(photo_folder):
+        if os.path.splitext(photo)[1].upper() == ".JPG":
+            fullpath = os.path.abspath(photo)
+            fullpathdir = os.path.dirname(fullpath)
+            thumbpath = os.path.join(fullpathdir, "thumbnails")
+            if not os.path.exists(thumbpath):
+                os.makedirs(thumbpath)
             img = Image.open(fullpath)
-            img.thumbnail((390,260),Image.ANTIALIAS)
-            img.save(os.path.join(thumbpath, os.path.basename(fullpath)), "JPEG")
-
+            img.thumbnail((390,260), Image.ANTIALIAS)
+            img.save(os.path.join(thumbpath, 
+                                      os.path.basename(fullpath)), "JPEG")                                 
+    return thumbpath
+                                      
 def getdomaindescription(gdb, subtype, codedvalue):
-    #In order to access domains, must make a local copy of database through ArcMap
     dmns = arcpy.da.ListDomains(gdb)
     for dmn in dmns:
         if dmn.name == subtype:
@@ -56,12 +65,12 @@ def getdomaindescription(gdb, subtype, codedvalue):
             val = vals.get(codedvalue)
             return val
 
-def create_resource_table(gdb, fc, photo_folder, spatref, idxfeat=None, sql=None):
+def create_resource_table(infc, photo_folder, spatref, idxfeat=None, sql=None):
     #Define table template
-    thumbpath = os.path.join(photo_folder, "thumbnails")
+    thumbpath = create_thumbnails(photo_folder)    
     document = docx.Document(os.path.join(os.path.dirname(__file__), 
                                           "../templates/template.docx"))
-    infc = os.path.join(gdb, fc)
+    gdb = os.path.dirname(infc)
     flds = ["ResourceID", "PropName", "Address", 
             "SHAPE@X", "SHAPE@Y",  "StrucType", "BldType", 
             "StyleType", "Eligibility", "ConstYr", "Notes", "GlobalID"]
@@ -142,8 +151,10 @@ def create_resource_table(gdb, fc, photo_folder, spatref, idxfeat=None, sql=None
                     row_cells[8].text = "{}".format(notes)
             except ValueError as e:
                 print e.message
+                print row
         document.save(os.path.join(photo_folder, "!tblReport.docx"))
-        return document
+#    os.remove(thumbpath)
+    return document
 
 def create_list_from_table_report(doc):
     #Assumes one table in history report
@@ -176,6 +187,36 @@ def spatial_join(idxfeat, pnt_tup, idxfld, spatref):
             for row in rows:
                 if row[1].contains(pntgeom):
                     return row[0]
+
+def spatial_join_new(infc, inflds, idxfeat, idxfld, spatref):
+    """
+    On the fly spatial join for a given coordinate pair
+    params:
+    pnt_tup - UTM coordinate pair
+    idxfeat - map index or other containing feature
+    fld - field to label table with
+    """
+    flds = ["ResourceID", "PropName", "Address", 
+            "SHAPE@X", "SHAPE@Y",  "StrucType", "BldType", 
+            "StyleType", "Eligibility", "ConstYr", "Notes", "GlobalID"]
+    rows = arcpy.da.SearchCursor(infc, flds)
+    for row in rows:
+        pnt = arcpy.Point(rows[3], rows[4])
+        pntgeom = arcpy.PointGeometry(pnt, spatref)
+        
+    if not arcpy.Exists(idxfeat):
+        return None
+    else:
+        pnt = arcpy.Point(pnt_tup[0], pnt_tup[1])    
+        pntgeom = arcpy.PointGeometry(pnt, spatref)
+        flds = [idxfld, 'SHAPE@']
+        featdict = {}
+        #Spatial references should be the same
+        with arcpy.da.SearchCursor(idxfeat, flds, "", spatref) as rows:
+            for row in rows:
+                if row[1].contains(pntgeom):
+                    pass
+                    
 
 def main():
     pass
