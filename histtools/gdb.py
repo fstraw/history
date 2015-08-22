@@ -82,7 +82,7 @@ def create_structures_fc(gdb):
                                         has_m, has_z, spatref)
     arcpy.AddField_management(fc, "ResourceID", "LONG", "", "", "", 
                               "Resource ID", "NULLABLE", "NON_REQUIRED","")
-    arcpy.AddField_management(fc, "PropName", "TEXT", "", "", 50, 
+    arcpy.AddField_management(fc, "PropName", "TEXT", "", "", 100, 
                               "Resource Name", "NULLABLE", "NON_REQUIRED","")
     arcpy.AddField_management(fc, "StrucType", "LONG", "", "", "", 
                               "Structure Type", "NON_NULLABLE", "NON_REQUIRED","")
@@ -136,7 +136,7 @@ def create_districts_fc(gdb):
                                         has_m, has_z, spatref)
     arcpy.AddField_management(fc, "ResourceID", "LONG", "", "", "", 
                               "Resource ID", "NULLABLE", "NON_REQUIRED","")
-    arcpy.AddField_management(fc, "PropName", "TEXT", "", "", 50, 
+    arcpy.AddField_management(fc, "PropName", "TEXT", "", "", 100, 
                               "Resource Name", "NULLABLE", "NON_REQUIRED","")
     arcpy.AddField_management(fc, "StrucType", "LONG", "", "", "", 
                               "Structure Type", "NON_NULLABLE", "NON_REQUIRED","")

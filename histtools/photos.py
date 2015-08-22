@@ -6,6 +6,7 @@ History Photo Tools
 
 Suite of tools for working with environmental photos
 
+
 @author: bbatt
 """
 
@@ -67,7 +68,7 @@ def create_resource_table(gdb, fc, photo_folder, spatref, idxfeat=None, sql=None
     with arcpy.da.SearchCursor(infc, flds, sql, spatref) as cursor:
         tbl = document.add_table(rows=1, cols=9)
         hdr_cells  = tbl.rows[0].cells
-        hdr_cells[1].text = "Resource ID"
+        hdr_cells[1].text = "Resource Number / Field Map Reference"
         hdr_cells[2].text = "Name"
         hdr_cells[3].text = "Address"
         hdr_cells[4].text = "UTM E"
