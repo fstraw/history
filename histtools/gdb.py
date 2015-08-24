@@ -264,6 +264,30 @@ def get_dom_desc(fc, field_name, subtype_code, codedvalue):
                             domcodes = fieldvalues[1].codedValues
                             result = domcodes[codedvalue]
     return result
+
+def sort_by_easting(fc, fld):
+    """
+    Assign resource id based on easting
     
+    params:
+    fc - feature class
+    fld - fld to sort
+    """    
+    flds = [fld, "SHAPE@X"]
+    rows = arcpy.da.SearchCursor(fc, flds)
+    #sort cursor
+    sort = sorted(rows, key=itemgetter(1))
+    #create incremental ids (fld) on sorted cursor
+    dsort = [(x, i[1]) for x, i in enumerate(sort, 1)]
+    ws = os.path.dirname(fc)
+    #update fld with new id
+    with arcpy.da.Editor(ws) as edit:
+        update = arcpy.da.UpdateCursor(fc, flds)
+        for row in update:
+            for item in dsort:
+                if row[1] == item[1]:
+                    row[0] = item[0]
+                    update.updateRow(row)
+                    
 if __name__ == "__main__":
     pass
