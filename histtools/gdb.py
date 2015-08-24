@@ -14,17 +14,7 @@ import os
 import arcpy
 from operator import itemgetter
 
-subtypes = {
-"0": "Barn", 
-"1": "Cemetery",
-"2": "Church",
-"3": "Commercial",
-"4": "Gas Station",
-"5": "House",
-"6": "Other",
-"7": "Outbuilding",
-"8": "School",
-}   
+from shared import  domains, eligdict, styledict, subtypes
 
 def generate_domains(gdb, domain_dict, xlsx):
     #Pull domain values from pre-formatted xlsx
@@ -41,20 +31,6 @@ def generate_domains(gdb, domain_dict, xlsx):
             print e.message
 
 def create_history_gdb(location):
-    domains = {
-    "Barn": "Barn Types", 
-    "Cemetery": "Cemetery Types", 
-    "Church": "Church Types", 
-    "Commercial": "Commercial Types", 
-    "Gas Station": "Gas Station Types", 
-    "House": "House Types", 
-    "Styles": "General Styles", 
-    "Other": "Other Features", 
-    "Outbuilding": "Outbuilding Types", 
-    "School": "School Types",
-    "Eligibility": "Eligibility Assessment",
-    "States": "Project States"
-    }   
     #xlsx that contains all required domains
     xlsx = os.path.join(os.path.dirname(__file__), 
                         "../templates/HistoryDomainsGA.xlsx")
@@ -76,48 +52,45 @@ def create_structures_fc(gdb):
     if arcpy.Exists(fc):
         arcpy.Delete_management(os.path.join(gdb, fc))
     has_m = "DISABLED"
-    has_z = "DISABLED"    
+    has_z = "DISABLED"
+    req = "NON_REQUIRED"
     # Execute CreateFeatureclass
     arcpy.CreateFeatureclass_management(gdb, fc, "POINT", "", 
                                         has_m, has_z, spatref)
     arcpy.AddField_management(fc, "ResourceID", "LONG", "", "", "", 
-                              "Resource ID", "NULLABLE", "NON_REQUIRED","")
+                              "Resource ID", "NULLABLE", req,"")
     arcpy.AddField_management(fc, "PropName", "TEXT", "", "", 100, 
-                              "Resource Name", "NULLABLE", "NON_REQUIRED","")
+                              "Resource Name", "NULLABLE", req,"")
     arcpy.AddField_management(fc, "StrucType", "LONG", "", "", "", 
-                              "Structure Type", "NON_NULLABLE", "NON_REQUIRED","")
+                              "Structure Type", "NON_NULLABLE", req,"")
     arcpy.AddField_management(fc, "BldType", "TEXT", "", "", 3, 
-                              "Building Type", "NON_NULLABLE", "NON_REQUIRED","")
+                              "Building Type", "NON_NULLABLE", req,"")
     arcpy.AddField_management(fc, "StyleType", "TEXT", "", "", 3, 
-                              "Architectural Style", "NON_NULLABLE", "NON_REQUIRED","")
+                              "Architectural Style", "NON_NULLABLE", req,"")
     arcpy.AddField_management(fc, "Eligibility", "TEXT", "", "", 3, 
-                              "Eligibility Status", "NON_NULLABLE", "NON_REQUIRED","")
+                              "Eligibility Status", "NON_NULLABLE", req,"")
     arcpy.AddField_management(fc, "ConstYr", "LONG", "", "", "", 
-                              "Construction Year", "NULLABLE", "NON_REQUIRED","")
+                              "Construction Year", "NULLABLE", req,"")
     arcpy.AddField_management(fc, "Address", "TEXT", "", "", 200, "Address", 
-                              "NULLABLE", "NON_REQUIRED","")
+                              "NULLABLE", req,"")
     arcpy.AddField_management(fc, "Notes", "TEXT", "", "", 200, "Notes", 
-                              "NULLABLE", "NON_REQUIRED","")
+                              "NULLABLE", req,"")
     arcpy.AddGlobalIDs_management(fc)
     arcpy.AddField_management(fc, "EPProject", "TEXT", "", "", 20, 
-                              "EPEI Project ID", "NULLABLE", "NON_REQUIRED","")
-    arcpy.SetSubtypeField_management(fc,"StrucType")
+                              "EPEI Project ID", "NULLABLE", req,"")
+    arcpy.SetSubtypeField_management(fc, "StrucType")
     for item in subtypes.items():
-        arcpy.AddSubtype_management(fc,item[0], item[1])
-    arcpy.SetDefaultSubtype_management(fc,5)
+        arcpy.AddSubtype_management(fc, item[0], item[1])
+    arcpy.SetDefaultSubtype_management(fc, 5)
     for item in subtypes.items():    
         arcpy.AssignDomainToField_management(fc, "BldType", item[1], item[0])
-    arcpy.AssignDomainToField_management(fc, "StyleType", "Styles", 
-                                         ['0','1','2','3','4','5','6','7','8'])
-    arcpy.AssignDomainToField_management(fc, "Eligibility", "Eligibility", 
-                                         ['0','1','2','3','4','5','6','7','8'])
-    arcpy.AssignDefaultToField_management(fc,"Eligibility","U", 
-                                          ['0','1','2','3','4','5','6','7','8'])
-    arcpy.AssignDefaultToField_management(fc,"StyleType","NS", 
-                                          ['0','1','2','3','4','5','6','7','8'])
-    arcpy.AssignDefaultToField_management(fc,"BldType","OT", 
-                                          ['0','1','2','3','4','6','7','8'])
-    arcpy.AssignDefaultToField_management(fc,"BldType","NAT", '5')
+    subs = ['0', '1', '2', '3', '4', '6' ,'7' ,'8']
+    arcpy.AssignDomainToField_management(fc, "StyleType", "Styles", subs)
+    arcpy.AssignDomainToField_management(fc, "Eligibility", "Eligibility", subs)
+    arcpy.AssignDefaultToField_management(fc,"Eligibility", "U", subs)
+    arcpy.AssignDefaultToField_management(fc,"StyleType", "NS", subs)
+    arcpy.AssignDefaultToField_management(fc,"BldType", "OT", subs)
+    arcpy.AssignDefaultToField_management(fc, "BldType", "NAT", '5')
     return os.path.join(gdb, fc)
 
 def create_districts_fc(gdb):
@@ -130,53 +103,51 @@ def create_districts_fc(gdb):
     if arcpy.Exists(fc):
         arcpy.Delete_management(os.path.join(gdb, fc))
     has_m = "DISABLED"
-    has_z = "DISABLED"    
+    has_z = "DISABLED"
+    req = "NON_REQUIRED"
     # Execute CreateFeatureclass
     arcpy.CreateFeatureclass_management(gdb, fc, "POLYGON", "", 
                                         has_m, has_z, spatref)
     arcpy.AddField_management(fc, "ResourceID", "LONG", "", "", "", 
-                              "Resource ID", "NULLABLE", "NON_REQUIRED","")
+                              "Resource ID", "NULLABLE", req,"")
     arcpy.AddField_management(fc, "PropName", "TEXT", "", "", 100, 
-                              "Resource Name", "NULLABLE", "NON_REQUIRED","")
+                              "Resource Name", "NULLABLE", req,"")
     arcpy.AddField_management(fc, "StrucType", "LONG", "", "", "", 
-                              "Structure Type", "NON_NULLABLE", "NON_REQUIRED","")
+                              "Structure Type", "NON_NULLABLE", req,"")
     arcpy.AddField_management(fc, "BldType", "TEXT", "", "", 3, 
-                              "Building Type", "NON_NULLABLE", "NON_REQUIRED","")
+                              "Building Type", "NON_NULLABLE", req,"")
     arcpy.AddField_management(fc, "StyleType", "TEXT", "", "", 3, 
-                              "Architectural Style", "NON_NULLABLE", "NON_REQUIRED","")
+                              "Architectural Style", "NON_NULLABLE", req,"")
     arcpy.AddField_management(fc, "Eligibility", "TEXT", "", "", 3, 
-                              "Eligibility Status", "NON_NULLABLE", "NON_REQUIRED","")
+                              "Eligibility Status", "NON_NULLABLE", req,"")
     arcpy.AddField_management(fc, "ConstYr", "LONG", "", "", "", 
-                              "Construction Year", "NULLABLE", "NON_REQUIRED","")
+                              "Construction Year", "NULLABLE", req,"")
     arcpy.AddField_management(fc, "Address", "TEXT", "", "", 200, "Address", 
-                              "NULLABLE", "NON_REQUIRED","")
+                              "NULLABLE", req,"")
     arcpy.AddField_management(fc, "Notes", "TEXT", "", "", 200, "Notes", 
-                              "NULLABLE", "NON_REQUIRED","")
+                              "NULLABLE", req,"")
     arcpy.AddGlobalIDs_management(fc)
     arcpy.AddField_management(fc, "EPProject", "TEXT", "", "", 20, 
-                              "EPEI Project ID", "NULLABLE", "NON_REQUIRED","")
+                              "EPEI Project ID", "NULLABLE", req,"")
     arcpy.SetSubtypeField_management(fc,"StrucType")
     for item in subtypes.items():
         arcpy.AddSubtype_management(fc,item[0], item[1])
     arcpy.SetDefaultSubtype_management(fc,5)
     for item in subtypes.items():    
         arcpy.AssignDomainToField_management(fc, "BldType", item[1], item[0])
-    arcpy.AssignDomainToField_management(fc, "StyleType", "Styles", 
-                                         ['0','1','2','3','4','5','6','7','8'])
-    arcpy.AssignDomainToField_management(fc, "Eligibility", "Eligibility", 
-                                         ['0','1','2','3','4','5','6','7','8'])
-    arcpy.AssignDefaultToField_management(fc,"Eligibility","U", 
-                                          ['0','1','2','3','4','5','6','7','8'])
-    arcpy.AssignDefaultToField_management(fc,"StyleType","NS", 
-                                          ['0','1','2','3','4','5','6','7','8'])
-    arcpy.AssignDefaultToField_management(fc,"BldType","OT", 
-                                          ['0','1','2','3','4','6','7','8'])
-    arcpy.AssignDefaultToField_management(fc,"BldType","NAT", '5')
+    subs = ['0', '1', '2', '3', '4', '6' ,'7' ,'8']
+    arcpy.AssignDomainToField_management(fc, "StyleType", "Styles", subs)
+    arcpy.AssignDomainToField_management(fc, "Eligibility", "Eligibility", subs)
+    arcpy.AssignDefaultToField_management(fc,"Eligibility","U", subs)
+    arcpy.AssignDefaultToField_management(fc,"StyleType","NS", subs)
+    arcpy.AssignDefaultToField_management(fc,"BldType","OT", subs)
+    arcpy.AssignDefaultToField_management(fc, "BldType", "NAT", '5')
+    return os.path.join(gdb, fc)
 
 def create_gap_format(gdb, geomtype, fc, crs):
     """
     Create custom format from original feature class template
-    """
+    """    
     arcpy.env.workspace = gdb
     if crs.upper() == "EAST":
         #NAD_1983_StatePlane_Georgia_East_FIPS_1001_Feet WKID
@@ -188,30 +159,31 @@ def create_gap_format(gdb, geomtype, fc, crs):
     if arcpy.Exists(fc):
         arcpy.Delete_management(fc)    
     has_m = "DISABLED"
-    has_z = "DISABLED" 
+    has_z = "DISABLED"
+    req = "NON_REQUIRED"
     arcpy.CreateFeatureclass_management(gdb, fc, geomtype, "", 
                                         has_m, has_z, spatref)
     arcpy.AddField_management(fc, "ResourceID", "LONG", "", "", "", 
-                              "Resource ID", "NULLABLE", "NON_REQUIRED","")
+                              "Resource ID", "NULLABLE", req,"")
     arcpy.AddField_management(fc, "PropName", "TEXT", "", "", 50, 
-                              "Resource Name", "NULLABLE", "NON_REQUIRED","")
+                              "Resource Name", "NULLABLE", req,"")
     arcpy.AddField_management(fc, "Address", "TEXT", "", "", 200, "Address", 
-                              "NULLABLE", "NON_REQUIRED","")
+                              "NULLABLE", req,"")
     arcpy.AddField_management(fc, "POINT_X", "DOUBLE", "", "", "", 
-                              "Easting", "NULLABLE", "NON_REQUIRED","")
+                              "Easting", "NULLABLE", req,"")
     arcpy.AddField_management(fc, "POINT_Y", "DOUBLE", "", "", "", 
-                              "Northing", "NULLABLE", "NON_REQUIRED","")
+                              "Northing", "NULLABLE", req,"")
     arcpy.AddField_management(fc, "BldType", "TEXT", "", "", 50, 
-                              "Building Type", "NON_NULLABLE", "NON_REQUIRED","")
+                              "Building Type", "NON_NULLABLE", req,"")
     arcpy.AddField_management(fc, "StyleType", "TEXT", "", "", 50, 
-                              "Architectural Style", "NON_NULLABLE", "NON_REQUIRED","")
+                              "Architectural Style", "NON_NULLABLE", req,"")
     arcpy.AddField_management(fc, "Eligibility", "TEXT", "", "", 50, 
-                              "Eligibility Status", "NON_NULLABLE", "NON_REQUIRED","")
+                              "Eligibility Status", "NON_NULLABLE", req,"")
     arcpy.AddField_management(fc, "Notes", "TEXT", "", "", 200, "Notes", 
-                              "NULLABLE", "NON_REQUIRED","")
+                              "NULLABLE", req,"")
     return os.path.join(gdb, fc)
 
-def append_to_gap_structure(inputfc, outputfc):
+def append_to_gap_feature(inputfc, outputfc, sql):
     """
     Append features to custom fc
     """
@@ -222,7 +194,7 @@ def append_to_gap_structure(inputfc, outputfc):
     #Fields not carried over to output
     exclude = ["StrucType", "EPProject"]
     insertflds = [fld for fld in flds if not fld in exclude]
-    inputcursor = arcpy.da.SearchCursor(inputfc, flds, "", outcrs)
+    inputcursor = arcpy.da.SearchCursor(inputfc, flds, sql, outcrs)
     outputcursor = arcpy.da.InsertCursor(outputfc, insertflds)
     resindex = flds.index("ResourceID")
     projindex = flds.index("EPProject")
@@ -265,7 +237,7 @@ def get_dom_desc(fc, field_name, subtype_code, codedvalue):
                             result = domcodes[codedvalue]
     return result
 
-def sort_by_easting(fc, fld):
+def sort_by_easting(fc, fld, sql):
     """
     Assign resource id based on easting
     
@@ -274,7 +246,7 @@ def sort_by_easting(fc, fld):
     fld - fld to sort
     """    
     flds = [fld, "SHAPE@X"]
-    rows = arcpy.da.SearchCursor(fc, flds)
+    rows = arcpy.da.SearchCursor(fc, flds. sql)
     #sort cursor
     sort = sorted(rows, key=itemgetter(1))
     #create incremental ids (fld) on sorted cursor

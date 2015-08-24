@@ -20,6 +20,22 @@ subtypes = {
 8: "School",
 }
 
+#domains used in geodatabase
+domains = {
+"Barn": "Barn Types", 
+"Cemetery": "Cemetery Types", 
+"Church": "Church Types", 
+"Commercial": "Commercial Types", 
+"Gas Station": "Gas Station Types", 
+"House": "House Types", 
+"Styles": "General Styles", 
+"Other": "Other Features", 
+"Outbuilding": "Outbuilding Types", 
+"School": "School Types",
+"Eligibility": "Eligibility Assessment",
+"States": "Project States"
+} 
+
 #Eligibility for domains
 eligdict = {
 "E": "Eligible",
