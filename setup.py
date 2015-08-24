@@ -10,7 +10,7 @@ config = {
 	'download_url': 'www.lowestfrequency.com',
 	'author_email': 'fstraw@lowestfrequency.com',
 	'version': '0.5',
-	'install_requires': ['nose', 'docx'],
+	'install_requires': ['nose', 'docx', 'arcpy'],
 	'packages': ['histtools'],
 	'scripts': [],
 	'name': 'historytools'
