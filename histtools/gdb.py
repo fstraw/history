@@ -275,13 +275,16 @@ def sort_by_easting(fc, fld):
     """    
     flds = [fld, "SHAPE@X"]
     rows = arcpy.da.SearchCursor(fc, flds)
-    #sort by easting
+    #sort cursor
     sort = sorted(rows, key=itemgetter(1))
+    #create incremental ids (fld) on sorted cursor
+    dsort = [(x, i[1]) for x, i in enumerate(sort, 1)]
     ws = os.path.dirname(fc)
+    #update fld with new id
     with arcpy.da.Editor(ws) as edit:
         update = arcpy.da.UpdateCursor(fc, flds)
         for row in update:
-            for item in sort:
+            for item in dsort:
                 if row[1] == item[1]:
                     row[0] = item[0]
                     update.updateRow(row)
