@@ -14,7 +14,7 @@ import os
 import arcpy
 from operator import itemgetter
 
-from shared import  domains, eligdict, styledict, subtypes
+from shared import domains, eligdict, styledict, subtypes
 
 def generate_domains(gdb, domain_dict, xlsx):
     #Pull domain values from pre-formatted xlsx
@@ -165,7 +165,7 @@ def create_gap_format(gdb, geomtype, fc, crs):
                                         has_m, has_z, spatref)
     arcpy.AddField_management(fc, "ResourceID", "LONG", "", "", "", 
                               "Resource ID", "NULLABLE", req,"")
-    arcpy.AddField_management(fc, "PropName", "TEXT", "", "", 50, 
+    arcpy.AddField_management(fc, "PropName", "TEXT", "", "", 100, 
                               "Resource Name", "NULLABLE", req,"")
     arcpy.AddField_management(fc, "Address", "TEXT", "", "", 200, "Address", 
                               "NULLABLE", req,"")

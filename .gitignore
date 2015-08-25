@@ -43,3 +43,6 @@ $RECYCLE.BIN/
 Network Trash Folder
 Temporary Items
 .apdisk
+dist
+historytools.egg-info
+build
